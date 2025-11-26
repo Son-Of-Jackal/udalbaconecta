@@ -7,7 +7,7 @@ import hashlib
 # ==========================================
 #           CONFIGURACIÓN INICIAL
 # ==========================================
-st.set_page_config(page_title="Udalba Conecta", page_icon="🎓", layout="centered")
+st.set_page_config(page_title="Alba Conecta", page_icon="🎓", layout="centered")
 
 # Estilos CSS (Modo Udalba)
 st.markdown("""
@@ -15,7 +15,6 @@ st.markdown("""
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     
-    /* Botones principales azules */
     div.stButton > button:first-child {
         background-color: #002e6e; 
         color: white;
@@ -28,15 +27,10 @@ st.markdown("""
         color: white;
     }
     
-    /* Botones de borrar (rojos) - Truco CSS */
-    div[data-testid="stForm"] + div div.stButton > button {
-        background-color: #ff4b4b;
-        color: white;
-    }
-    /* El segundo botón rojo (para solicitudes) necesita especificidad extra */
+    div[data-testid="stForm"] + div div.stButton > button,
     div.stButton > button:contains("Eliminar") {
-         background-color: #ff4b4b !important;
-         color: white !important;
+        background-color: #ff4b4b !important;
+        color: white !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -51,7 +45,6 @@ def init_db():
     conn = sqlite3.connect('arriendos_udalba.db')
     c = conn.cursor()
     
-    # Tabla USUARIOS
     c.execute('''CREATE TABLE IF NOT EXISTS usuarios (
                     email TEXT PRIMARY KEY,
                     nombre TEXT,
@@ -59,7 +52,6 @@ def init_db():
                     whatsapp TEXT,
                     carrera TEXT)''')
     
-    # Tabla PRODUCTOS
     c.execute('''CREATE TABLE IF NOT EXISTS productos (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     nombre TEXT,
@@ -70,7 +62,6 @@ def init_db():
                     foto BLOB,
                     FOREIGN KEY(email_dueño) REFERENCES usuarios(email))''')
     
-    # Tabla SOLICITUDES
     c.execute('''CREATE TABLE IF NOT EXISTS solicitudes (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     titulo TEXT,
@@ -118,6 +109,9 @@ def register_user(email, nombre, password, whatsapp, carrera):
     except:
         return False
 
+# LISTA DE CARRERAS (Centralizada)
+LISTA_CARRERAS = ["Ing. Civil Minas", "Ing. Civil Industrial", "Enfermería", "Derecho", "Geología", "Otras"]
+
 # ==========================================
 #           INTERFAZ GRÁFICA
 # ==========================================
@@ -127,9 +121,9 @@ if st.session_state['usuario_actual'] is None:
     try:
         st.sidebar.image("logo.png", use_container_width=True)
     except:
-        st.sidebar.title("🎓 UDALBA")
+        st.sidebar.title("🎓 ALBA")
         
-    st.markdown("<h1 style='text-align: center; color: #e6b800;'>🎓 Udalba Conecta</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center; color: #e6b800;'>🎓 Alba Conecta</h1>", unsafe_allow_html=True)
     
     menu_login = st.sidebar.selectbox("Bienvenido", ["Iniciar Sesión", "Registrarse"])
     
@@ -153,7 +147,8 @@ if st.session_state['usuario_actual'] is None:
         new_name = st.text_input("Nombre Completo")
         new_pass = st.text_input("Contraseña", type='password')
         new_wsp = st.text_input("WhatsApp (Ej: 56912345678)")
-        new_carrera = st.selectbox("Carrera", ["Ing. Civil Minas", "Enfermería", "Derecho", "Otras"])
+        # AQUÍ ESTÁ LA LISTA DE CARRERAS ACTUALIZADA
+        new_carrera = st.selectbox("Carrera", LISTA_CARRERAS)
         
         if st.button("Crear Cuenta"):
             if "@udalba.cl" in new_email:
@@ -185,7 +180,7 @@ else:
     
     opcion = st.sidebar.radio("Navegación", ["Catálogo", "Publicar Aviso", "Muro de Solicitudes", "Mi Perfil"])
 
-    # 1. PANTALLA CATÁLOGO
+    # 1. CATÁLOGO
     if opcion == "Catálogo":
         st.title("🛒 Catálogo General")
         
@@ -215,7 +210,7 @@ else:
         else:
             st.info("No hay productos disponibles.")
 
-    # 2. PANTALLA PUBLICAR AVISO
+    # 2. PUBLICAR
     elif opcion == "Publicar Aviso":
         st.title("📢 Publicar Artículo")
         with st.form("form_prod"):
@@ -232,7 +227,7 @@ else:
                 time.sleep(1)
                 st.rerun()
 
-    # 3. PANTALLA MURO DE SOLICITUDES
+    # 3. SOLICITUDES
     elif opcion == "Muro de Solicitudes":
         st.title("🙋‍♂️ Muro de Solicitudes")
         st.caption("¿Necesitas algo que no está en el catálogo? Pídelo aquí.")
@@ -273,29 +268,46 @@ else:
         else:
             st.info("Nadie está buscando nada por ahora.")
 
-    # 4. PANTALLA MI PERFIL (GESTIÓN COMPLETA)
+    # 4. MI PERFIL
     elif opcion == "Mi Perfil":
         st.title("👤 Gestión de Perfil")
         
-        with st.container(border=True):
-            col_a, col_b = st.columns(2)
-            col_a.write(f"**Nombre:** {usuario[1]}")
-            col_a.write(f"**Email:** {usuario[0]}")
-            col_b.write(f"**WhatsApp:** {usuario[3]}")
-            col_b.write(f"**Carrera:** {usuario[4]}")
+        # --- EDICIÓN DE DATOS ---
+        with st.expander("📝 Editar mis datos personales", expanded=True):
+            with st.form("form_editar_perfil"):
+                col_a, col_b = st.columns(2)
+                
+                new_nombre = col_a.text_input("Nombre", value=usuario[1])
+                new_wsp = col_b.text_input("WhatsApp", value=usuario[3])
+                
+                # Lógica para pre-seleccionar la carrera actual
+                idx_carrera = 0
+                if usuario[4] in LISTA_CARRERAS:
+                    idx_carrera = LISTA_CARRERAS.index(usuario[4])
+                
+                new_carrera = st.selectbox("Carrera", LISTA_CARRERAS, index=idx_carrera)
+                
+                if st.form_submit_button("💾 Actualizar mis datos"):
+                    run_query("UPDATE usuarios SET nombre=?, whatsapp=?, carrera=? WHERE email=?", 
+                             (new_nombre, new_wsp, new_carrera, usuario[0]))
+                    
+                    # Recargar datos de sesión
+                    new_data = run_query("SELECT * FROM usuarios WHERE email=?", (usuario[0],), return_data=True)[0]
+                    st.session_state['usuario_actual'] = new_data
+                    
+                    st.success("Perfil actualizado correctamente.")
+                    time.sleep(1)
+                    st.rerun()
 
-        # === SECCIÓN 1: MIS PRODUCTOS ===
+        # MIS PRODUCTOS
         st.divider()
         st.subheader("📦 Mis Publicaciones (Ventas)")
-
         mis_items = run_query("SELECT id, nombre, descripcion, precio FROM productos WHERE email_dueño = ?", (usuario[0],), return_data=True)
 
         if mis_items:
-            # Diccionario: "Nombre ($Precio)" -> Datos
             dict_prods = {f"{item[1]} (${item[3]})": item for item in mis_items}
             sel_prod = st.selectbox("Selecciona un producto para editar:", list(dict_prods.keys()))
-            
-            dat_prod = dict_prods[sel_prod] # Recuperar datos reales
+            dat_prod = dict_prods[sel_prod]
             
             with st.form("edit_producto"):
                 st.write(f"Editando: **{dat_prod[1]}**")
@@ -318,17 +330,14 @@ else:
         else:
             st.info("No tienes productos publicados.")
 
-        # === SECCIÓN 2: MIS SOLICITUDES (NUEVO) ===
+        # MIS SOLICITUDES
         st.divider()
         st.subheader("🙋‍♂️ Mis Solicitudes (Búsquedas)")
-        
         mis_sols = run_query("SELECT id, titulo, descripcion, presupuesto FROM solicitudes WHERE email_solicitante = ?", (usuario[0],), return_data=True)
         
         if mis_sols:
-            # Diccionario: "Titulo ($Presupuesto)" -> Datos
             dict_sols = {f"{s[1]} (${s[3]})": s for s in mis_sols}
             sel_sol = st.selectbox("Selecciona una solicitud para editar:", list(dict_sols.keys()))
-            
             dat_sol = dict_sols[sel_sol]
             
             with st.form("edit_solicitud"):
